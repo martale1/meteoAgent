@@ -1,23 +1,53 @@
 # meteoAgent
 
-Scraper Python per le previsioni di Gioiosa Marea da iLMeteo.it.
+Scraper Python per le previsioni meteo e marine di Gioiosa Marea da iLMeteo.it.
 
-Lo script estrae i 7 giorni disponibili dalla pagina principale, legge i dati orari dei singoli giorni e genera:
+Il progetto legge i 7 giorni disponibili nella pagina principale, apre le pagine giornaliere, raccoglie i dati orari e invia un riepilogo formattato su Telegram.
 
-- `gioiosa_marea_ilmeteo.csv`: riepilogo giornaliero.
-- `gioiosa_marea_orario_ilmeteo.csv`: dettaglio ora per ora.
-- Messaggio Telegram formattato con temperature, onde, vento e direzioni.
+## Funzionalita
 
-## Configurazione
+- Estrazione temperature minime e massime giornaliere.
+- Estrazione ora per ora di onde, vento, raffiche, direzione vento, umidita e pressione.
+- Riepilogo giornaliero con range onde e vento.
+- Badge onde nel messaggio Telegram:
+  - verde sotto 30 cm
+  - arancione fino a 50 cm
+  - rosso sopra 50 cm
+- Link finale alla pagina iLMeteo.
 
-Copia `.env.example` in `.env` e inserisci:
+## File generati
 
-```env
-TELEGRAM_BOT_TOKEN=...
-TELEGRAM_RECEIVER_ID=...
+Lo script crea questi CSV locali:
+
+- `gioiosa_marea_ilmeteo.csv`: riepilogo per giorno.
+- `gioiosa_marea_orario_ilmeteo.csv`: dettaglio orario.
+
+I CSV sono ignorati da Git per evitare di salvare output temporanei nel repository.
+
+## Configurazione Telegram
+
+Copia `.env.example` in `.env`:
+
+```powershell
+Copy-Item .env.example .env
 ```
 
-Il file `.env` non viene tracciato da Git.
+Poi inserisci i valori reali:
+
+```env
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+TELEGRAM_RECEIVER_ID=your_telegram_chat_id
+```
+
+Il file `.env` contiene dati sensibili ed e escluso dal repository tramite `.gitignore`.
+
+## Installazione
+
+Con l'ambiente Conda `openaiAgent`:
+
+```powershell
+& "C:\Users\theoi\anaconda3\Scripts\conda.exe" run -n openaiAgent pip install -r requirements.txt
+```
 
 ## Esecuzione
 
@@ -25,8 +55,14 @@ Il file `.env` non viene tracciato da Git.
 & "C:\Users\theoi\anaconda3\Scripts\conda.exe" run -n openaiAgent python ilmeteo_gioiosa.py
 ```
 
-## Dipendenze
+## Script principali
 
-```powershell
-pip install -r requirements.txt
-```
+- `ilmeteo_gioiosa.py`: scraper principale e invio Telegram.
+- `inspect_available_days.py`: verifica i giorni disponibili.
+- `inspect_day_ilmeteo.py`: ispezione della tabella meteo giornaliera.
+- `inspect_ilmeteo.py`: ispezione della pagina meteo principale.
+- `inspect_mare_ilmeteo.py`: ispezione della pagina mare.
+
+## Note
+
+Il sito iLMeteo puo cambiare struttura HTML nel tempo. Se lo scraping smette di funzionare, gli script `inspect_*` aiutano a verificare rapidamente selettori e tabelle disponibili.
