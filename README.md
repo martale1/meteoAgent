@@ -55,9 +55,17 @@ Con l'ambiente Conda `openaiAgent`:
 & "C:\Users\theoi\anaconda3\Scripts\conda.exe" run -n openaiAgent python ilmeteo_gioiosa.py
 ```
 
+Su Raspberry/Linux puoi usare lo script:
+
+```bash
+chmod +x run_meteo.sh
+./run_meteo.sh
+```
+
 ## Script principali
 
 - `ilmeteo_gioiosa.py`: scraper principale e invio Telegram.
+- `run_meteo.sh`: launcher per Raspberry/Linux con virtualenv automatico.
 - `inspect_available_days.py`: verifica i giorni disponibili.
 - `inspect_day_ilmeteo.py`: ispezione della tabella meteo giornaliera.
 - `inspect_ilmeteo.py`: ispezione della pagina meteo principale.
