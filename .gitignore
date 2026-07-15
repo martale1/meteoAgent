@@ -1,0 +1,8 @@
+.env
+.idea/
+.agents/
+.codex/
+__pycache__/
+*.pyc
+*.log
+gioiosa_marea_*.csv
