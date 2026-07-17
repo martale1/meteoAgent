@@ -55,6 +55,12 @@ Con l'ambiente Conda `openaiAgent`:
 & "C:\Users\theoi\anaconda3\Scripts\conda.exe" run -n openaiAgent python ilmeteo_gioiosa.py
 ```
 
+Healthcheck sensori AnyIOT:
+
+```powershell
+& "C:\Users\theoi\anaconda3\Scripts\conda.exe" run -n openaiAgent python anyiot_healthcheck.py
+```
+
 Su Raspberry/Linux puoi usare lo script:
 
 ```bash
@@ -62,10 +68,19 @@ chmod +x run_meteo.sh
 ./run_meteo.sh
 ```
 
+Per l'healthcheck AnyIOT:
+
+```bash
+chmod +x run_anyiot_healthcheck.sh
+./run_anyiot_healthcheck.sh
+```
+
 ## Script principali
 
 - `ilmeteo_gioiosa.py`: scraper principale e invio Telegram.
+- `anyiot_healthcheck.py`: controllo heartbeat sensori temperatura/umidita AnyIOT.
 - `run_meteo.sh`: launcher per Raspberry/Linux con virtualenv automatico.
+- `run_anyiot_healthcheck.sh`: launcher per healthcheck AnyIOT.
 - `inspect_available_days.py`: verifica i giorni disponibili.
 - `inspect_day_ilmeteo.py`: ispezione della tabella meteo giornaliera.
 - `inspect_ilmeteo.py`: ispezione della pagina meteo principale.
@@ -74,3 +89,17 @@ chmod +x run_meteo.sh
 ## Note
 
 Il sito iLMeteo puo cambiare struttura HTML nel tempo. Se lo scraping smette di funzionare, gli script `inspect_*` aiutano a verificare rapidamente selettori e tabelle disponibili.
+
+## Cron Healthcheck
+
+Per controllare AnyIOT ogni 30 minuti:
+
+```cron
+*/30 * * * * cd $HOME/meteoAgent && ./run_anyiot_healthcheck.sh >> $HOME/meteoAgent/anyiot_healthcheck.log 2>&1
+```
+
+Di default Telegram viene avvisato solo in caso di problemi:
+
+- pagina non raggiungibile
+- nessun sensore estratto
+- uno o piu sensori non aggiornati da oltre 45 minuti
