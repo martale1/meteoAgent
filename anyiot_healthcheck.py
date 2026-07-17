@@ -11,6 +11,7 @@ import telepot
 URL = "http://theoiziruam.ddns.net:808/index2.php"
 MAX_SENSOR_AGE_MINUTES = 45
 SEND_OK_NOTIFICATION = False
+MONITORED_HOUSES = {"Cusago"}
 TELEGRAM_TOKEN_ENV = "TELEGRAM_BOT_TOKEN"
 TELEGRAM_RECEIVER_ENV = "TELEGRAM_RECEIVER_ID"
 
@@ -79,6 +80,10 @@ def parse_sensors(page_html):
             )
         )
     return sensors
+
+
+def filter_monitored_sensors(sensors):
+    return [sensor for sensor in sensors if sensor.house in MONITORED_HOUSES]
 
 
 def sensor_age_minutes(reference_time, sensor):
@@ -154,7 +159,7 @@ def main():
     try:
         page_html = fetch_page()
         reference_time = parse_page_time(page_html)
-        sensors = parse_sensors(page_html)
+        sensors = filter_monitored_sensors(parse_sensors(page_html))
         stale_sensors = [
             (sensor, sensor_age_minutes(reference_time, sensor))
             for sensor in sensors

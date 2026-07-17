@@ -60,6 +60,8 @@ Lo script estrae i sensori temperatura/umidita e usa il timestamp dell'ultimo ag
 
 Logica di allarme:
 
+- al momento vengono monitorati solo i sensori della casa `Cusago`
+- i sensori `Zappardino` / Sicilia sono ignorati per evitare falsi allarmi quando vengono spenti
 - i sensori dovrebbero aggiornare ogni 30 minuti
 - un sensore e considerato non aggiornato dopo 45 minuti
 - Telegram viene avvisato solo in caso di problemi
