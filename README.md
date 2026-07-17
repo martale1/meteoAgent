@@ -1,38 +1,105 @@
 # meteoAgent
 
-Scraper Python per le previsioni meteo e marine di Gioiosa Marea da iLMeteo.it.
+Automazioni Python per scraping e notifiche Telegram.
 
-Il progetto legge i 7 giorni disponibili nella pagina principale, apre le pagine giornaliere, raccoglie i dati orari e invia un riepilogo formattato su Telegram.
+Il repository contiene due scraper separati:
 
-## Funzionalita
+- `ilmeteo_gioiosa.py`: previsioni meteo/mare per Gioiosa Marea da iLMeteo.it.
+- `anyiot_healthcheck.py`: controllo heartbeat dei sensori temperatura/umidita AnyIOT.
 
-- Estrazione temperature minime e massime giornaliere.
-- Estrazione ora per ora di onde, vento, raffiche, direzione vento, umidita e pressione.
-- Riepilogo giornaliero con range onde e vento.
-- Badge onde nel messaggio Telegram:
+I due script sono indipendenti: puoi eseguirli e schedularli separatamente.
+
+## Scraper 1: Meteo Gioiosa Marea
+
+`ilmeteo_gioiosa.py` legge i 7 giorni disponibili da iLMeteo.it, apre le pagine giornaliere e raccoglie i dati orari.
+
+Funzionalita:
+
+- temperature minime e massime giornaliere
+- onde, vento, raffiche e direzione vento ora per ora
+- umidita e pressione
+- riepilogo Telegram formattato
+- badge onde nel messaggio Telegram:
   - verde sotto 30 cm
   - arancione fino a 50 cm
   - rosso sopra 50 cm
-- Link finale alla pagina iLMeteo.
+- link finale alla pagina iLMeteo
 
-## File generati
+File generati:
 
-Lo script crea questi CSV locali:
+- `gioiosa_marea_ilmeteo.csv`: riepilogo giornaliero
+- `gioiosa_marea_orario_ilmeteo.csv`: dettaglio orario
 
-- `gioiosa_marea_ilmeteo.csv`: riepilogo per giorno.
-- `gioiosa_marea_orario_ilmeteo.csv`: dettaglio orario.
+Esecuzione:
 
-I CSV sono ignorati da Git per evitare di salvare output temporanei nel repository.
+```bash
+./run_meteo.sh
+```
+
+Oppure direttamente:
+
+```bash
+python ilmeteo_gioiosa.py
+```
+
+Cron suggerito, ogni giorno alle 8:00 e alle 20:00:
+
+```cron
+0 8,20 * * * cd $HOME/meteoAgent && ./run_meteo.sh >> $HOME/meteoAgent/meteo.log 2>&1
+```
+
+## Scraper 2: AnyIOT Healthcheck
+
+`anyiot_healthcheck.py` controlla la pagina:
+
+```text
+http://theoiziruam.ddns.net:808/index2.php
+```
+
+Lo script estrae i sensori temperatura/umidita e usa il timestamp dell'ultimo aggiornamento come heartbeat.
+
+Logica di allarme:
+
+- i sensori dovrebbero aggiornare ogni 30 minuti
+- un sensore e considerato non aggiornato dopo 45 minuti
+- Telegram viene avvisato solo in caso di problemi
+
+Invia notifica se:
+
+- la pagina AnyIOT non e raggiungibile
+- non viene estratto nessun sensore
+- uno o piu sensori temperatura/umidita non aggiornano da oltre 45 minuti
+- tutti i sensori risultano non aggiornati
+
+Non invia notifica quando tutto e OK.
+
+Esecuzione:
+
+```bash
+./run_anyiot_healthcheck.sh
+```
+
+Oppure direttamente:
+
+```bash
+python anyiot_healthcheck.py
+```
+
+Cron suggerito, ogni 30 minuti:
+
+```cron
+*/30 * * * * cd $HOME/meteoAgent && ./run_anyiot_healthcheck.sh >> $HOME/meteoAgent/anyiot_healthcheck.log 2>&1
+```
 
 ## Configurazione Telegram
 
 Copia `.env.example` in `.env`:
 
-```powershell
-Copy-Item .env.example .env
+```bash
+cp .env.example .env
 ```
 
-Poi inserisci i valori reali:
+Inserisci i valori reali:
 
 ```env
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token
@@ -41,65 +108,59 @@ TELEGRAM_RECEIVER_ID=your_telegram_chat_id
 
 Il file `.env` contiene dati sensibili ed e escluso dal repository tramite `.gitignore`.
 
-## Installazione
+## Installazione su Raspberry/Linux
 
-Con l'ambiente Conda `openaiAgent`:
+```bash
+cd ~
+git clone https://github.com/martale1/meteoAgent.git
+cd meteoAgent
+cp .env.example .env
+nano .env
+chmod +x run_meteo.sh run_anyiot_healthcheck.sh
+```
+
+I launcher creano automaticamente `.venv` e installano le dipendenze da `requirements.txt` se necessario.
+
+Prima esecuzione meteo:
+
+```bash
+./run_meteo.sh
+```
+
+Prima esecuzione healthcheck:
+
+```bash
+./run_anyiot_healthcheck.sh
+```
+
+## Installazione su Windows/Conda
+
+Con ambiente Conda `openaiAgent`:
 
 ```powershell
 & "C:\Users\theoi\anaconda3\Scripts\conda.exe" run -n openaiAgent pip install -r requirements.txt
 ```
 
-## Esecuzione
+Meteo:
 
 ```powershell
 & "C:\Users\theoi\anaconda3\Scripts\conda.exe" run -n openaiAgent python ilmeteo_gioiosa.py
 ```
 
-Healthcheck sensori AnyIOT:
+AnyIOT:
 
 ```powershell
 & "C:\Users\theoi\anaconda3\Scripts\conda.exe" run -n openaiAgent python anyiot_healthcheck.py
 ```
 
-Su Raspberry/Linux puoi usare lo script:
+## Script di supporto
 
-```bash
-chmod +x run_meteo.sh
-./run_meteo.sh
-```
-
-Per l'healthcheck AnyIOT:
-
-```bash
-chmod +x run_anyiot_healthcheck.sh
-./run_anyiot_healthcheck.sh
-```
-
-## Script principali
-
-- `ilmeteo_gioiosa.py`: scraper principale e invio Telegram.
-- `anyiot_healthcheck.py`: controllo heartbeat sensori temperatura/umidita AnyIOT.
-- `run_meteo.sh`: launcher per Raspberry/Linux con virtualenv automatico.
-- `run_anyiot_healthcheck.sh`: launcher per healthcheck AnyIOT.
-- `inspect_available_days.py`: verifica i giorni disponibili.
-- `inspect_day_ilmeteo.py`: ispezione della tabella meteo giornaliera.
-- `inspect_ilmeteo.py`: ispezione della pagina meteo principale.
-- `inspect_mare_ilmeteo.py`: ispezione della pagina mare.
+- `inspect_available_days.py`: verifica i giorni disponibili su iLMeteo
+- `inspect_day_ilmeteo.py`: ispezione della tabella meteo giornaliera
+- `inspect_ilmeteo.py`: ispezione della pagina meteo principale
+- `inspect_mare_ilmeteo.py`: ispezione della pagina mare
+- `inspect_anyiot.py`: ispezione della pagina AnyIOT
 
 ## Note
 
-Il sito iLMeteo puo cambiare struttura HTML nel tempo. Se lo scraping smette di funzionare, gli script `inspect_*` aiutano a verificare rapidamente selettori e tabelle disponibili.
-
-## Cron Healthcheck
-
-Per controllare AnyIOT ogni 30 minuti:
-
-```cron
-*/30 * * * * cd $HOME/meteoAgent && ./run_anyiot_healthcheck.sh >> $HOME/meteoAgent/anyiot_healthcheck.log 2>&1
-```
-
-Di default Telegram viene avvisato solo in caso di problemi:
-
-- pagina non raggiungibile
-- nessun sensore estratto
-- uno o piu sensori non aggiornati da oltre 45 minuti
+I siti sorgente possono cambiare struttura HTML nel tempo. Se uno scraper smette di funzionare, usa gli script `inspect_*` per verificare rapidamente selettori, tabelle e blocchi disponibili.
