@@ -13,12 +13,53 @@ PROFILE_DIR = Path("playwright_chatgpt_profile")
 CHROME_PROFILE_DIR = Path("chrome_chatgpt_profile")
 TELEGRAM_TOKEN_ENV = "TELEGRAM_BOT_TOKEN"
 TELEGRAM_RECEIVER_ENV = "TELEGRAM_RECEIVER_ID"
-DEFAULT_PROMPT = (
-    "Cerca news di oggi su Vodafone e riassumi in al massimo 100 parole. "
-    "Inoltre trova target price, se presenti, e indica supporti e resistenze con livelli critici."
-)
 DEFAULT_CDP_URL = "http://127.0.0.1:9222"
 SEND_TELEGRAM_BY_DEFAULT = True
+
+
+def build_vodafone_prompt():
+    return """Cerca news di oggi su Vodafone. Rispondi in italiano e usa esattamente questo formato:
+
+📌 VODAFONE - REPORT GIORNALIERO
+
+🗓 Data:
+[oggi]
+
+📰 News rilevanti:
+- [news 1]
+- [news 2]
+Se non ci sono news rilevanti, scrivi: Nessuna news rilevante trovata oggi.
+
+🎯 Target price / analisti:
+- [broker/banca]: [target price] - [rating] - [data]
+Se non trovi aggiornamenti recenti, scrivi: Nessun aggiornamento recente sui target price.
+
+📈 Supporti:
+- S1: [livello]
+- S2: [livello]
+
+📉 Resistenze:
+- R1: [livello]
+- R2: [livello]
+
+⚠️ Livelli critici:
+- [livello e motivo]
+
+🧭 Sintesi operativa:
+[max 5 righe, chiara e prudente]
+
+🔗 Fonti:
+- [fonte 1]
+- [fonte 2]
+
+Regole:
+- Non inventare dati.
+- Se un dato non è disponibile, scrivi "non disponibile".
+- Distingui news di oggi da news precedenti riprese oggi.
+- Mantieni il messaggio compatto, adatto a Telegram."""
+
+
+DEFAULT_PROMPT = build_vodafone_prompt()
 
 
 def load_env_file(path=".env"):
