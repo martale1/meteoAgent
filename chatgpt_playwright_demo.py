@@ -25,8 +25,6 @@ STOCK_CATALOG = {
     "VOD.L": {"company": "Vodafone", "market": "London Stock Exchange"},
     "A2A.MI": {"company": "A2A", "market": "Borsa Italiana"},
     "AVIO.MI": {"company": "Avio", "market": "Borsa Italiana"},
-    "ENEL.MI": {"company": "Enel", "market": "Borsa Italiana"},
-    "TIT.MI": {"company": "Telecom Italia", "market": "Borsa Italiana"},
 }
 
 
