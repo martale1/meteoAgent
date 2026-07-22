@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 from pathlib import Path
 
 import telepot
@@ -18,6 +19,18 @@ SEND_TELEGRAM_BY_DEFAULT = True
 DEFAULT_COMPANY = "Vodafone"
 DEFAULT_TICKER = "VOD.L"
 DEFAULT_MARKET = "London Stock Exchange"
+
+
+def configure_stdout():
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except AttributeError:
+        pass
+
+
+def safe_print(*values):
+    print(*values, flush=True)
 
 
 def build_stock_prompt(company, ticker="", market=""):
@@ -108,10 +121,10 @@ def find_prompt_box(page):
 def send_prompt(page, prompt):
     initial_assistant_count = page.locator("[data-message-author-role='assistant']").count()
     prompt_box = find_prompt_box(page)
-    print("Campo prompt trovato.", flush=True)
+    safe_print("Campo prompt trovato.")
     prompt_box.click()
     prompt_box.fill(prompt)
-    print("Prompt inserito, invio...", flush=True)
+    safe_print("Prompt inserito, invio...")
 
     send_selectors = [
         "[data-testid='send-button']",
@@ -141,7 +154,7 @@ def wait_for_response(page, initial_assistant_count=0):
     step_ms = 2000
     elapsed_ms = 0
 
-    print("Attendo la risposta di ChatGPT...", flush=True)
+    safe_print("Attendo la risposta di ChatGPT...")
     while elapsed_ms < deadline_ms:
         page.wait_for_timeout(step_ms)
         elapsed_ms += step_ms
@@ -150,7 +163,7 @@ def wait_for_response(page, initial_assistant_count=0):
         count = messages.count()
         if count <= initial_assistant_count:
             if elapsed_ms % 10000 == 0:
-                print(f"Ancora nessuna nuova risposta dopo {elapsed_ms // 1000}s...", flush=True)
+                safe_print(f"Ancora nessuna nuova risposta dopo {elapsed_ms // 1000}s...")
             continue
 
         try:
@@ -163,7 +176,7 @@ def wait_for_response(page, initial_assistant_count=0):
         else:
             stable_reads = 0
             last_text = current_text
-            print(f"Risposta in corso: {len(last_text)} caratteri...", flush=True)
+            safe_print(f"Risposta in corso: {len(last_text)} caratteri...")
 
         if last_text and stable_reads >= 2:
             return last_text
@@ -183,12 +196,12 @@ def run_in_page(page, prompt, login_only):
         input("Fai login nel browser aperto, poi premi INVIO qui per chiudere...")
         return
 
-    print("Prompt da inviare:", flush=True)
-    print(prompt, flush=True)
+    safe_print("Prompt da inviare:")
+    safe_print(prompt.encode("ascii", errors="ignore").decode("ascii")[:500])
     initial_assistant_count = send_prompt(page, prompt)
     response = wait_for_response(page, initial_assistant_count)
-    print("\n--- Risposta ChatGPT ---")
-    print(response or "Nessuna risposta trovata.")
+    safe_print("\n--- Risposta ChatGPT ---")
+    safe_print(response or "Nessuna risposta trovata.")
     return response
 
 
@@ -196,13 +209,19 @@ def send_telegram_message(text_message):
     token = os.getenv(TELEGRAM_TOKEN_ENV)
     receiver_id = os.getenv(TELEGRAM_RECEIVER_ENV)
     if not token or not receiver_id:
-        print("\nTelegram non inviato: configura TELEGRAM_BOT_TOKEN e TELEGRAM_RECEIVER_ID.")
+        safe_print("\nTelegram non inviato: configura TELEGRAM_BOT_TOKEN e TELEGRAM_RECEIVER_ID.")
         return
-    bot = telepot.Bot(token)
-    bot.sendMessage(receiver_id, text_message)
+    try:
+        bot = telepot.Bot(token)
+        bot.sendMessage(receiver_id, text_message)
+    except Exception as exc:
+        safe_print(f"\nTelegram non inviato: {exc}")
+        return
+    safe_print("\nMessaggio Telegram inviato.")
 
 
 def main():
+    configure_stdout()
     load_env_file()
     parser = argparse.ArgumentParser(description="Demo Playwright per una chat manuale con ChatGPT.")
     parser.add_argument(
@@ -258,7 +277,6 @@ def main():
             response = run_in_page(page, prompt, args.login_only)
             if send_to_telegram and response:
                 send_telegram_message(response)
-                print("\nMessaggio Telegram inviato.")
             return
 
         launch_options = {
@@ -274,7 +292,6 @@ def main():
         response = run_in_page(page, prompt, args.login_only)
         if send_to_telegram and response:
             send_telegram_message(response)
-            print("\nMessaggio Telegram inviato.")
         context.close()
 
 
