@@ -20,6 +20,14 @@ SEND_TELEGRAM_BY_DEFAULT = True
 DEFAULT_COMPANY = "Vodafone"
 DEFAULT_TICKER = "VOD.L"
 DEFAULT_MARKET = "London Stock Exchange"
+DEFAULT_STOCKS = ["VOD.L"]
+STOCK_CATALOG = {
+    "VOD.L": {"company": "Vodafone", "market": "London Stock Exchange"},
+    "A2A.MI": {"company": "A2A", "market": "Borsa Italiana"},
+    "AVIO.MI": {"company": "Avio", "market": "Borsa Italiana"},
+    "ENEL.MI": {"company": "Enel", "market": "Borsa Italiana"},
+    "TIT.MI": {"company": "Telecom Italia", "market": "Borsa Italiana"},
+}
 
 
 def configure_stdout():
@@ -88,6 +96,21 @@ Regole:
 
 
 DEFAULT_PROMPT = build_stock_prompt(DEFAULT_COMPANY, DEFAULT_TICKER, DEFAULT_MARKET)
+
+
+def parse_stock_list(value):
+    if not value:
+        return DEFAULT_STOCKS
+    return [item.strip().upper() for item in value.replace(";", ",").split(",") if item.strip()]
+
+
+def stock_from_ticker(ticker):
+    info = STOCK_CATALOG.get(ticker.upper(), {})
+    return {
+        "ticker": ticker.upper(),
+        "company": info.get("company", ticker.upper()),
+        "market": info.get("market", ""),
+    }
 
 
 def load_env_file(path=".env"):
@@ -247,6 +270,11 @@ def main():
         help="Mercato/listino del titolo, opzionale.",
     )
     parser.add_argument(
+        "--stocks",
+        default="",
+        help='Lista ticker separati da virgola, es. "VOD.L,A2A.MI,AVIO.MI". Usata se non passi un prompt custom.',
+    )
+    parser.add_argument(
         "--login-only",
         action="store_true",
         help="Apre ChatGPT e lascia il browser aperto per fare login manuale.",
@@ -267,17 +295,28 @@ def main():
         help="Invia la risposta raccolta su Telegram usando TELEGRAM_BOT_TOKEN e TELEGRAM_RECEIVER_ID da .env.",
     )
     args = parser.parse_args()
-    prompt = args.prompt or build_stock_prompt(args.company, args.ticker, args.market)
     send_to_telegram = args.telegram or SEND_TELEGRAM_BY_DEFAULT
+    stocks = parse_stock_list(args.stocks)
 
     with sync_playwright() as p:
         if args.cdp:
             browser = p.chromium.connect_over_cdp(args.cdp)
             context = browser.contexts[0] if browser.contexts else browser.new_context()
-            page = open_chatgpt_page(context)
-            response = run_in_page(page, prompt, args.login_only)
-            if send_to_telegram and response:
-                send_telegram_message(response)
+            if args.prompt or args.login_only:
+                prompt = args.prompt or build_stock_prompt(args.company, args.ticker, args.market)
+                page = open_chatgpt_page(context)
+                response = run_in_page(page, prompt, args.login_only)
+                if send_to_telegram and response:
+                    send_telegram_message(response)
+            else:
+                for index, ticker in enumerate(stocks, start=1):
+                    stock = stock_from_ticker(ticker)
+                    safe_print(f"\n=== Analisi {index}/{len(stocks)}: {stock['company']} ({stock['ticker']}) ===")
+                    prompt = build_stock_prompt(stock["company"], stock["ticker"], stock["market"])
+                    page = open_chatgpt_page(context)
+                    response = run_in_page(page, prompt, args.login_only)
+                    if send_to_telegram and response:
+                        send_telegram_message(response)
             return
 
         launch_options = {
@@ -289,10 +328,21 @@ def main():
             launch_options["channel"] = "chrome"
 
         context = p.chromium.launch_persistent_context(**launch_options)
-        page = open_chatgpt_page(context)
-        response = run_in_page(page, prompt, args.login_only)
-        if send_to_telegram and response:
-            send_telegram_message(response)
+        if args.prompt or args.login_only:
+            prompt = args.prompt or build_stock_prompt(args.company, args.ticker, args.market)
+            page = open_chatgpt_page(context)
+            response = run_in_page(page, prompt, args.login_only)
+            if send_to_telegram and response:
+                send_telegram_message(response)
+        else:
+            for index, ticker in enumerate(stocks, start=1):
+                stock = stock_from_ticker(ticker)
+                safe_print(f"\n=== Analisi {index}/{len(stocks)}: {stock['company']} ({stock['ticker']}) ===")
+                prompt = build_stock_prompt(stock["company"], stock["ticker"], stock["market"])
+                page = open_chatgpt_page(context)
+                response = run_in_page(page, prompt, args.login_only)
+                if send_to_telegram and response:
+                    send_telegram_message(response)
         context.close()
 
 

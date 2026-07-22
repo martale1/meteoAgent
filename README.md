@@ -225,6 +225,20 @@ Da PyCharm, in `Parameters`:
 --company "Enel" --ticker "ENEL.MI" --market "Borsa Italiana"
 ```
 
+Per analizzare una lista variabile di titoli:
+
+```bash
+python chatgpt_playwright_demo.py --stocks "VOD.L,A2A.MI,AVIO.MI"
+```
+
+Da PyCharm, in `Parameters`:
+
+```text
+--stocks "VOD.L,A2A.MI,AVIO.MI"
+```
+
+Lo script apre una nuova chat per ogni ticker e invia un report Telegram per ciascun titolo. I ticker noti vengono arricchiti con nome societa e mercato tramite `STOCK_CATALOG`; per ticker non presenti in catalogo usa il ticker come nome.
+
 Puoi ancora passare un prompt completamente custom come argomento finale:
 
 ```bash
