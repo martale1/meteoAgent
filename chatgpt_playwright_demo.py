@@ -13,6 +13,12 @@ PROFILE_DIR = Path("playwright_chatgpt_profile")
 CHROME_PROFILE_DIR = Path("chrome_chatgpt_profile")
 TELEGRAM_TOKEN_ENV = "TELEGRAM_BOT_TOKEN"
 TELEGRAM_RECEIVER_ENV = "TELEGRAM_RECEIVER_ID"
+DEFAULT_PROMPT = (
+    "Cerca news di oggi su Vodafone e riassumi in al massimo 100 parole. "
+    "Inoltre trova target price, se presenti, e indica supporti e resistenze con livelli critici."
+)
+DEFAULT_CDP_URL = "http://127.0.0.1:9222"
+SEND_TELEGRAM_BY_DEFAULT = True
 
 
 def load_env_file(path=".env"):
@@ -118,7 +124,7 @@ def main():
     parser.add_argument(
         "prompt",
         nargs="?",
-        default="Cerca news di oggi su vodafone .",
+        default=DEFAULT_PROMPT,
         help="Messaggio da inviare a ChatGPT.",
     )
     parser.add_argument(
@@ -133,7 +139,7 @@ def main():
     )
     parser.add_argument(
         "--cdp",
-        default="",
+        default=DEFAULT_CDP_URL,
         help="Connetti Playwright a un Chrome gia' avviato con remote debugging, es. http://127.0.0.1:9222.",
     )
     parser.add_argument(
@@ -142,6 +148,7 @@ def main():
         help="Invia la risposta raccolta su Telegram usando TELEGRAM_BOT_TOKEN e TELEGRAM_RECEIVER_ID da .env.",
     )
     args = parser.parse_args()
+    send_to_telegram = args.telegram or SEND_TELEGRAM_BY_DEFAULT
 
     with sync_playwright() as p:
         if args.cdp:
@@ -149,7 +156,7 @@ def main():
             context = browser.contexts[0] if browser.contexts else browser.new_context()
             page = open_chatgpt_page(context)
             response = run_in_page(page, args.prompt, args.login_only)
-            if args.telegram and response:
+            if send_to_telegram and response:
                 send_telegram_message(response)
                 print("\nMessaggio Telegram inviato.")
             return
@@ -165,7 +172,7 @@ def main():
         context = p.chromium.launch_persistent_context(**launch_options)
         page = open_chatgpt_page(context)
         response = run_in_page(page, args.prompt, args.login_only)
-        if args.telegram and response:
+        if send_to_telegram and response:
             send_telegram_message(response)
             print("\nMessaggio Telegram inviato.")
         context.close()
