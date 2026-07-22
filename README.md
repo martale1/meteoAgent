@@ -157,11 +157,35 @@ AnyIOT:
 
 ## Script di supporto
 
+- `chatgpt_playwright_demo.py`: demo locale Playwright con profilo persistente per aprire ChatGPT e inviare un prompt
 - `inspect_available_days.py`: verifica i giorni disponibili su iLMeteo
 - `inspect_day_ilmeteo.py`: ispezione della tabella meteo giornaliera
 - `inspect_ilmeteo.py`: ispezione della pagina meteo principale
 - `inspect_mare_ilmeteo.py`: ispezione della pagina mare
 - `inspect_anyiot.py`: ispezione della pagina AnyIOT
+
+## Demo Playwright ChatGPT
+
+Questa demo e pensata per prove locali. Usa un profilo browser persistente in `playwright_chatgpt_profile`, quindi puoi fare login una volta e riusare la sessione.
+
+Installa Playwright e Chromium:
+
+```bash
+pip install -r requirements.txt
+python -m playwright install chromium
+```
+
+Primo login manuale:
+
+```bash
+python chatgpt_playwright_demo.py --login-only
+```
+
+Invio di un prompt:
+
+```bash
+python chatgpt_playwright_demo.py "Scrivi una frase breve di test"
+```
 
 ## Note
 

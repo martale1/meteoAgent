@@ -6,3 +6,4 @@ __pycache__/
 *.pyc
 *.log
 gioiosa_marea_*.csv
+playwright_chatgpt_profile/
