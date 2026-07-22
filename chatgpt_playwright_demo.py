@@ -106,26 +106,51 @@ def find_prompt_box(page):
 
 
 def send_prompt(page, prompt):
+    initial_assistant_count = page.locator("[data-message-author-role='assistant']").count()
     prompt_box = find_prompt_box(page)
+    print("Campo prompt trovato.", flush=True)
     prompt_box.click()
     prompt_box.fill(prompt)
+    print("Prompt inserito, invio...", flush=True)
+
+    send_selectors = [
+        "[data-testid='send-button']",
+        "button[aria-label='Invia prompt']",
+        "button[aria-label='Send prompt']",
+        "button[aria-label*='Invia']",
+        "button[aria-label*='Send']",
+    ]
+    for selector in send_selectors:
+        button = page.locator(selector).last
+        try:
+            button.wait_for(state="visible", timeout=3000)
+            if button.is_enabled():
+                button.click()
+                return initial_assistant_count
+        except (PlaywrightTimeoutError, PlaywrightError):
+            continue
+
     page.keyboard.press("Enter")
+    return initial_assistant_count
 
 
-def wait_for_response(page):
+def wait_for_response(page, initial_assistant_count=0):
     last_text = ""
     stable_reads = 0
     deadline_ms = 180000
     step_ms = 2000
     elapsed_ms = 0
 
+    print("Attendo la risposta di ChatGPT...", flush=True)
     while elapsed_ms < deadline_ms:
         page.wait_for_timeout(step_ms)
         elapsed_ms += step_ms
 
         messages = page.locator("[data-message-author-role='assistant']")
         count = messages.count()
-        if count == 0:
+        if count <= initial_assistant_count:
+            if elapsed_ms % 10000 == 0:
+                print(f"Ancora nessuna nuova risposta dopo {elapsed_ms // 1000}s...", flush=True)
             continue
 
         try:
@@ -138,6 +163,7 @@ def wait_for_response(page):
         else:
             stable_reads = 0
             last_text = current_text
+            print(f"Risposta in corso: {len(last_text)} caratteri...", flush=True)
 
         if last_text and stable_reads >= 2:
             return last_text
@@ -148,6 +174,7 @@ def wait_for_response(page):
 def open_chatgpt_page(context_or_browser):
     page = context_or_browser.new_page()
     page.goto(CHATGPT_URL, wait_until="domcontentloaded")
+    page.bring_to_front()
     return page
 
 
@@ -156,8 +183,10 @@ def run_in_page(page, prompt, login_only):
         input("Fai login nel browser aperto, poi premi INVIO qui per chiudere...")
         return
 
-    send_prompt(page, prompt)
-    response = wait_for_response(page)
+    print("Prompt da inviare:", flush=True)
+    print(prompt, flush=True)
+    initial_assistant_count = send_prompt(page, prompt)
+    response = wait_for_response(page, initial_assistant_count)
     print("\n--- Risposta ChatGPT ---")
     print(response or "Nessuna risposta trovata.")
     return response
