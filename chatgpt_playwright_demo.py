@@ -13,6 +13,7 @@ CHATGPT_URL = "https://chatgpt.com/"
 PROFILE_DIR = Path("playwright_chatgpt_profile")
 CHROME_PROFILE_DIR = Path("chrome_chatgpt_profile")
 TELEGRAM_TOKEN_ENV = "TELEGRAM_BOT_TOKEN"
+TELEGRAM_TOKEN_FALLBACK_ENV = "TELEGRAM_BOT_TOKEN_CH1"
 TELEGRAM_RECEIVER_ENV = "TELEGRAM_RECEIVER_ID"
 DEFAULT_CDP_URL = "http://127.0.0.1:9222"
 SEND_TELEGRAM_BY_DEFAULT = True
@@ -206,7 +207,7 @@ def run_in_page(page, prompt, login_only):
 
 
 def send_telegram_message(text_message):
-    token = os.getenv(TELEGRAM_TOKEN_ENV)
+    token = os.getenv(TELEGRAM_TOKEN_ENV) or os.getenv(TELEGRAM_TOKEN_FALLBACK_ENV)
     receiver_id = os.getenv(TELEGRAM_RECEIVER_ENV)
     if not token or not receiver_id:
         safe_print("\nTelegram non inviato: configura TELEGRAM_BOT_TOKEN e TELEGRAM_RECEIVER_ID.")
