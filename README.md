@@ -181,10 +181,48 @@ Primo login manuale:
 python chatgpt_playwright_demo.py --login-only
 ```
 
+Se Google blocca il login con "browser non supportato", prova Chrome reale:
+
+```bash
+python chatgpt_playwright_demo.py --chrome --login-only
+```
+
 Invio di un prompt:
 
 ```bash
 python chatgpt_playwright_demo.py "Scrivi una frase breve di test"
+```
+
+Con Chrome reale:
+
+```bash
+python chatgpt_playwright_demo.py --chrome "Scrivi una frase breve di test"
+```
+
+Per inviare la risposta anche su Telegram:
+
+```bash
+python chatgpt_playwright_demo.py --cdp http://127.0.0.1:9222 --telegram "Cerca news di oggi su Vodafone"
+```
+
+Da PyCharm puoi creare una Run Configuration su `chatgpt_playwright_demo.py` e mettere in `Parameters`:
+
+```text
+--cdp http://127.0.0.1:9222 --telegram "Cerca news di oggi su Vodafone"
+```
+
+Alternativa avanzata: avvia Chrome con remote debugging e fai collegare Playwright a quel browser.
+
+Windows PowerShell:
+
+```powershell
+& "C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222 --user-data-dir="$env:TEMP\chatgpt-cdp-profile"
+```
+
+Poi:
+
+```bash
+python chatgpt_playwright_demo.py --cdp http://127.0.0.1:9222 "Scrivi una frase breve di test"
 ```
 
 ## Note
