@@ -15,12 +15,25 @@ TELEGRAM_TOKEN_ENV = "TELEGRAM_BOT_TOKEN"
 TELEGRAM_RECEIVER_ENV = "TELEGRAM_RECEIVER_ID"
 DEFAULT_CDP_URL = "http://127.0.0.1:9222"
 SEND_TELEGRAM_BY_DEFAULT = True
+DEFAULT_COMPANY = "Vodafone"
+DEFAULT_TICKER = "VOD.L"
+DEFAULT_MARKET = "London Stock Exchange"
 
 
-def build_vodafone_prompt():
-    return """Cerca news di oggi su Vodafone. Rispondi in italiano e usa esattamente questo formato:
+def build_stock_prompt(company, ticker="", market=""):
+    instrument = company
+    if ticker:
+        instrument += f" ({ticker})"
+    if market:
+        instrument += f" - {market}"
 
-📌 VODAFONE - REPORT GIORNALIERO
+    title = company.upper()
+    if ticker:
+        title += f" / {ticker.upper()}"
+
+    return f"""Cerca news di oggi su {instrument}. Rispondi in italiano e usa esattamente questo formato:
+
+📌 {title} - REPORT GIORNALIERO
 
 🗓 Data:
 [oggi]
@@ -56,10 +69,11 @@ Regole:
 - Non inventare dati.
 - Se un dato non è disponibile, scrivi "non disponibile".
 - Distingui news di oggi da news precedenti riprese oggi.
+- Se trovi livelli tecnici, specifica valuta/unita del prezzo.
 - Mantieni il messaggio compatto, adatto a Telegram."""
 
 
-DEFAULT_PROMPT = build_vodafone_prompt()
+DEFAULT_PROMPT = build_stock_prompt(DEFAULT_COMPANY, DEFAULT_TICKER, DEFAULT_MARKET)
 
 
 def load_env_file(path=".env"):
@@ -165,8 +179,23 @@ def main():
     parser.add_argument(
         "prompt",
         nargs="?",
-        default=DEFAULT_PROMPT,
-        help="Messaggio da inviare a ChatGPT.",
+        default="",
+        help="Messaggio custom da inviare a ChatGPT. Se omesso, viene costruito un report sul titolo indicato.",
+    )
+    parser.add_argument(
+        "--company",
+        default=DEFAULT_COMPANY,
+        help="Nome societa/titolo da analizzare.",
+    )
+    parser.add_argument(
+        "--ticker",
+        default=DEFAULT_TICKER,
+        help="Ticker del titolo, opzionale.",
+    )
+    parser.add_argument(
+        "--market",
+        default=DEFAULT_MARKET,
+        help="Mercato/listino del titolo, opzionale.",
     )
     parser.add_argument(
         "--login-only",
@@ -189,6 +218,7 @@ def main():
         help="Invia la risposta raccolta su Telegram usando TELEGRAM_BOT_TOKEN e TELEGRAM_RECEIVER_ID da .env.",
     )
     args = parser.parse_args()
+    prompt = args.prompt or build_stock_prompt(args.company, args.ticker, args.market)
     send_to_telegram = args.telegram or SEND_TELEGRAM_BY_DEFAULT
 
     with sync_playwright() as p:
@@ -196,7 +226,7 @@ def main():
             browser = p.chromium.connect_over_cdp(args.cdp)
             context = browser.contexts[0] if browser.contexts else browser.new_context()
             page = open_chatgpt_page(context)
-            response = run_in_page(page, args.prompt, args.login_only)
+            response = run_in_page(page, prompt, args.login_only)
             if send_to_telegram and response:
                 send_telegram_message(response)
                 print("\nMessaggio Telegram inviato.")
@@ -212,7 +242,7 @@ def main():
 
         context = p.chromium.launch_persistent_context(**launch_options)
         page = open_chatgpt_page(context)
-        response = run_in_page(page, args.prompt, args.login_only)
+        response = run_in_page(page, prompt, args.login_only)
         if send_to_telegram and response:
             send_telegram_message(response)
             print("\nMessaggio Telegram inviato.")

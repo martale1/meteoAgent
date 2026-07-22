@@ -211,7 +211,25 @@ Da PyCharm puoi creare una Run Configuration su `chatgpt_playwright_demo.py` e m
 --cdp http://127.0.0.1:9222 --telegram "Cerca news di oggi su Vodafone"
 ```
 
-In alternativa puoi lasciare `Parameters` vuoto: lo script usa il prompt configurato nella costante `DEFAULT_PROMPT`, si collega di default a `http://127.0.0.1:9222` e invia Telegram se `SEND_TELEGRAM_BY_DEFAULT` e `True`.
+In alternativa puoi lasciare `Parameters` vuoto: lo script costruisce un report usando `DEFAULT_COMPANY`, `DEFAULT_TICKER` e `DEFAULT_MARKET`, si collega di default a `http://127.0.0.1:9222` e invia Telegram se `SEND_TELEGRAM_BY_DEFAULT` e `True`.
+
+Per cambiare titolo senza modificare il codice:
+
+```bash
+python chatgpt_playwright_demo.py --company "Enel" --ticker "ENEL.MI" --market "Borsa Italiana"
+```
+
+Da PyCharm, in `Parameters`:
+
+```text
+--company "Enel" --ticker "ENEL.MI" --market "Borsa Italiana"
+```
+
+Puoi ancora passare un prompt completamente custom come argomento finale:
+
+```bash
+python chatgpt_playwright_demo.py "Cerca news di oggi su Telecom Italia e riassumi in 5 punti"
+```
 
 Alternativa avanzata: avvia Chrome con remote debugging e fai collegare Playwright a quel browser.
 
