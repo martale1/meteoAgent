@@ -272,14 +272,19 @@ def temp_badge(temp_max_c):
     return "🔴"      # Molto caldo (> 32°C)
 
 
-def rain_badge(precip_tot_mm):
+def weather_precipitation_line(precip_tot_mm, snow_cm=0, fog=False):
+    if snow_cm > 0:
+        return f"❄️ Neve: <b>{snow_cm:.1f} cm</b>"
+    if fog:
+        return "🌫️ Nebbia: <b>Presente</b>"
+    
     if precip_tot_mm <= 0:
-        return "☀️"
+        return "☀️ Precipitazioni: <i>Assenti</i>"
     if precip_tot_mm <= 2.0:
-        return "🟡"  # Pioggia debole (<= 2mm)
+        return f"🟡 ☔ Pioggia debole: <b>{precip_tot_mm:.1f} mm</b>"
     if precip_tot_mm <= 5.0:
-        return "🟠"  # Pioggia moderata (<= 5mm)
-    return "🔴"      # Pioggia forte (> 5mm)
+        return f"🟠 🌧️ Pioggia moderata: <b>{precip_tot_mm:.1f} mm</b>"
+    return f"🔴 ⛈️ Pioggia forte: <b>{precip_tot_mm:.1f} mm</b>"
 
 
 def hail_badge(hail_max_pct):
@@ -329,11 +334,11 @@ def format_telegram_message(summary, forecast, hourly_by_day, city_name, city_ur
         ]
 
         precip_tot = hourly.get("precipitazioni_tot_mm", 0.0)
-        r_badge = rain_badge(precip_tot)
-        if precip_tot > 0:
-            day_lines.append(f"{r_badge} ☔ Pioggia: <b>{precip_tot:.1f} mm</b>")
-        else:
-            day_lines.append(f"{r_badge} ☔ Pioggia: <i>Assenti</i>")
+        snow_tot = hourly.get("neve_tot_cm", 0.0)
+        fog_found = hourly.get("nebbia_presente", False)
+
+        p_line = weather_precipitation_line(precip_tot, snow_cm=snow_tot, fog=fog_found)
+        day_lines.append(p_line)
 
         hail_max = hourly.get("grandine_max_pct", 0)
         if hail_max > 0:
