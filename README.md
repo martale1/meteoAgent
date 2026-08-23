@@ -40,8 +40,8 @@ python ilmeteo_scraper.py gioiosa marea
 Crea o modifica il file `.env`:
 
 ```env
-TELEGRAM_BOT_TOKEN=8948798566:AAFN7uQMCM3azYx58CiAl5W7vGINaPbVnGk
-TELEGRAM_RECEIVER_ID=5872825403
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
+TELEGRAM_RECEIVER_ID=your_telegram_chat_id_here
 ```
 
 ---
