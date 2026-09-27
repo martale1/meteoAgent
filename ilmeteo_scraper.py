@@ -91,7 +91,7 @@ def parse_summary(soup, city_name):
 def parse_number(value):
     if not value:
         return None
-    match = re.search(r"\d+(?:,\d+)?|\d+(?:\.\d+)?", value)
+    match = re.search(r"\d+(?:[,.]\d+)?", value)
     return float(match.group(0).replace(",", ".")) if match else None
 
 
@@ -141,13 +141,19 @@ def parse_hourly_forecast(soup, day):
 
         temp_c = parse_number(cells[2])
         precip_mm, precip_text = parse_precipitation(cells[3])
+        # La neve e indicata in cm; non sommarla ai mm di pioggia.
+        snow_match = re.search(r"(\d+(?:[,.]\d+)?)\s*cm\b", cells[3], re.I)
+        snow_cm = float(snow_match.group(1).replace(",", ".")) if snow_match else 0.0
+        if snow_match:
+            rain_match = re.search(r"(\d+(?:[,.]\d+)?)\s*mm\b", cells[3], re.I)
+            precip_mm = float(rain_match.group(1).replace(",", ".")) if rain_match else 0.0
 
         wind_cell = cells[5] if (len(cells) > 5 and not cells[4]) else cells[4]
         wind_direction, wind_knots, wind_gust_knots, wind_intensity = parse_wind(wind_cell)
 
         wave_cm = None
         hail_pct = 0
-        
+
         # In Gioiosa Marea (mare): cells[6] e l'altezza dell'onda (es: '15'), cells[7] e la Grandine ('0%')
         # In Cusago (entroterra): cells[6] e direttamente la Grandine (es: '31%')
         if len(cells) > 6:
@@ -165,6 +171,7 @@ def parse_hourly_forecast(soup, day):
                 "ora": cells[0],
                 "temperatura_c": temp_c,
                 "precipitazioni_mm": precip_mm,
+                "neve_cm": snow_cm,
                 "precipitazioni_testo": precip_text,
                 "direzione_vento": wind_direction,
                 "vento": wind_knots,
@@ -188,6 +195,7 @@ def summarize_hourly_by_day(rows):
             {
                 "giorno": day,
                 "precipitazioni_tot_mm": 0.0,
+                "neve_tot_cm": 0.0,
                 "grandine_max_pct": 0,
                 "onda_min_cm": None,
                 "onda_max_cm": None,
@@ -199,6 +207,7 @@ def summarize_hourly_by_day(rows):
             },
         )
         summary["precipitazioni_tot_mm"] += row.get("precipitazioni_mm", 0.0)
+        summary["neve_tot_cm"] += row.get("neve_cm", 0.0)
         summary["grandine_max_pct"] = max(summary["grandine_max_pct"], row.get("grandine_pct", 0))
 
         for source, min_key, max_key in [
@@ -277,7 +286,7 @@ def weather_precipitation_line(precip_tot_mm, snow_cm=0, fog=False):
         return f"❄️ Neve: <b>{snow_cm:.1f} cm</b>"
     if fog:
         return "🌫️ Nebbia: <b>Presente</b>"
-    
+
     if precip_tot_mm <= 0:
         return "☀️ Precipitazioni: <i>Assenti</i>"
     if precip_tot_mm <= 2.0:
@@ -340,6 +349,10 @@ def format_telegram_message(summary, forecast, hourly_by_day, city_name, city_ur
         p_line = weather_precipitation_line(precip_tot, snow_cm=snow_tot, fog=fog_found)
         day_lines.append(p_line)
 
+        if city_name.strip().casefold() == "cusago":
+            lines.extend(day_lines + [""])
+            continue
+
         hail_max = hourly.get("grandine_max_pct", 0)
         if hail_max > 0:
             h_badge = hail_badge(hail_max)
@@ -373,7 +386,7 @@ def main():
     soup, final_url = fetch_soup(city_url)
     summary = parse_summary(soup, city_name)
     forecast = parse_daily_forecast(soup)
-    
+
     hourly_rows = []
     for day in forecast:
         if day.get("url"):
@@ -393,7 +406,7 @@ def main():
     csv_prefix = city_clean.replace("+", "_")
     with open(f"{csv_prefix}_ilmeteo.csv", "w", newline="", encoding="utf-8") as handle:
         fieldnames = [
-            "giorno", "temp_min_c", "temp_max_c", "precipitazioni_tot_mm", "grandine_max_pct",
+            "giorno", "temp_min_c", "temp_max_c", "precipitazioni_tot_mm", "neve_tot_cm", "grandine_max_pct",
             "onda_min_cm", "onda_max_cm", "vento_min", "vento_max", "raffica_max",
             "direzione_vento_prevalente", "direzioni_vento_giorno", "url"
         ]
@@ -403,6 +416,16 @@ def main():
             hourly = hourly_by_day.get(row["giorno"].lower(), {})
             combined = {**hourly, **row}
             writer.writerow({k: combined.get(k, "") for k in fieldnames})
+
+    if not forecast or any(day["giorno"].lower() not in hourly_by_day for day in forecast):
+        raise RuntimeError("Previsioni incomplete: impossibile verificare le precipitazioni di tutti i giorni.")
+
+    if not any(
+        day.get("precipitazioni_tot_mm", 0.0) > 0 or day.get("neve_tot_cm", 0.0) > 0
+        for day in hourly_daily
+    ):
+        print("Telegram non inviato: pioggia e neve assenti in tutti i giorni.")
+        return
 
     telegram_message = format_telegram_message(summary, forecast, hourly_by_day, city_name, final_url)
     send_telegram_message(telegram_message, parse_mode="HTML")
