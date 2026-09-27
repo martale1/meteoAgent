@@ -16,4 +16,4 @@ if [ ! -f ".venv/.deps_installed" ] || [ "requirements.txt" -nt ".venv/.deps_ins
   touch .venv/.deps_installed
 fi
 
-python ilmeteo_gioiosa.py
+python ilmeteo_scraper.py cusago
